@@ -7,13 +7,26 @@
 
 class Reader;
 class Writer;
-
+/*
+ * 一开始理解出了些问题, 我以为是要做一个类似于char* 之类的缓存. 这里抽象出的接口主要是
+ * 实现写到缓存, 然后可以用队列的方式读出来(FIFO),
+ * 以及包括一些状态, 是否写满了, 有多少空间还能用, 是否关闭(Writer写完了), 是否完成(Writer写完,Reader读完)
+ * 以及一些操作, 进队列, 出队列, 报错, 写多少字节
+ * 有些别扭的是这里的接口规划的是queue<string>(可能是方便一条一条读出来?), 但是又提供了读几个字节的接口,
+ * 一开始不太理解接口的含义啥的, 没琢磨明白, 后来知道要用queue<string>之后才想明白怎么个事
+ * */
 class ByteStream
 {
 protected:
   uint64_t capacity_;
   // Please add any additional state to the ByteStream here, and not to the Writer and Reader interfaces.
-
+  std::queue<std::string> saved_buffer;
+  uint64_t used_;
+  uint64_t total_bytes_push;
+  uint64_t total_bytes_pop;
+  /*bool finished; //total_bytes_push==total_bytes_pop&closed==true*/
+  bool closed;
+  bool error;
 public:
   explicit ByteStream( uint64_t capacity );
 
