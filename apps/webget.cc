@@ -10,18 +10,18 @@ using namespace std;
 void get_URL( const string& host, const string& path )
 {
   TCPSocket tcpSocket;
-  Address address=Address(host,"http");
-  tcpSocket.connect(address);
-  std::string gets="GET "+path+" HTTP/1.1"+"\r\n"+"Host: "+host+"\r\nConnection: close\r\n\r\n";
-  if(tcpSocket.write(gets)!=gets.length()){
-    cout<<"failed to connect";
+  Address address = Address( host, "http" );
+  tcpSocket.connect( address );
+  std::string gets = "GET " + path + " HTTP/1.1" + "\r\n" + "Host: " + host + "\r\nConnection: close\r\n\r\n";
+  if ( tcpSocket.write( gets ) != gets.length() ) {
+    cout << "failed to connect";
     return;
   }
   std::string buffer;
-  do{
-    tcpSocket.read(buffer);
-    cout<<buffer;
-  }while((!buffer.empty())&&(buffer.length()>0));
+  do {
+    tcpSocket.read( buffer );
+    cout << buffer;
+  } while ( ( !buffer.empty() ) && ( buffer.length() > 0 ) );
 }
 
 int main( int argc, char* argv[] )
