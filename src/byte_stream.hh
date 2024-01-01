@@ -27,6 +27,7 @@ protected:
   /*bool finished; //total_bytes_push==total_bytes_pop&closed==true*/
   bool closed;
   bool error;
+
 public:
   explicit ByteStream( uint64_t capacity );
 
