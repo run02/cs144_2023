@@ -33,17 +33,12 @@ public:
   // How many bytes are stored in the Reassembler itself?
   uint64_t bytes_pending() const;
 
-protected:
-  std::map<uint64_t, std::string> pending_buffer;
-  /* Maintain LAS-LSR<=RWS */
-  uint64_t receive_window_size;
-  // uint64_t last_acceptable_bytes;
-  uint64_t last_bytes_received;
-  uint64_t last_ordered_bytes;
-  uint64_t _bytes_pending;
-  bool finish_flag;
-  uint64_t index_of_end;
-
-private:
-  void auto_push( uint64_t first_index, Writer& output, std::string current_data );
+  private:
+    std::map<uint64_t, std::string> pending_buffer;
+    uint64_t _bytes_pending;
+    // uint64_t first_unpoped_index;
+    uint64_t first_unassembled_index;
+    uint64_t _EOF_index;
+    bool received_FIN;
+    uint64_t available_capacity;
 };
