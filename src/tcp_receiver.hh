@@ -15,10 +15,7 @@ public:
 
   /* The TCPReceiver sends TCPReceiverMessages back to the TCPSender. */
   TCPReceiverMessage send( const Writer& inbound_stream ) const;
-  explicit TCPReceiver():initial_sequence_number(0),establish(false),syn_(false),fin_(false){};
+  explicit TCPReceiver():initial_sequence_number(){}//,state_(LISTENING){};
 private:
-  Wrap32 initial_sequence_number;
-  bool establish;
-  bool syn_;
-  bool fin_;
+  std::optional<Wrap32> initial_sequence_number; //一开始不知道sequence_number是多少, SYN_RECEIVED之后才知道
 };
