@@ -4,6 +4,8 @@
 #include "tcp_receiver_message.hh"
 #include "tcp_sender_message.hh"
 
+#include <map>
+
 class TCPSender
 {
   Wrap32 isn_;
@@ -20,7 +22,7 @@ public:
   std::optional<TCPSenderMessage> maybe_send();
 
   /* Generate an empty TCPSenderMessage */
-  TCPSenderMessage send_empty_message() const;
+  TCPSenderMessage send_empty_message() const; //发一个只有Header,Payload为空的消息,用来让receiver来产生ack, 不需要管是不是发送成功了, 只需要管序列号正确即可
 
   /* Receive an act on a TCPReceiverMessage from the peer's receiver */
   void receive( const TCPReceiverMessage& msg );
@@ -31,4 +33,42 @@ public:
   /* Accessors for use in testing */
   uint64_t sequence_numbers_in_flight() const;  // How many sequence numbers are outstanding?
   uint64_t consecutive_retransmissions() const; // How many consecutive *re*transmissions have happened?
+
+private:
+  uint64_t current_time;//当前的时间, 每隔一段时间, tick会被调用, 告诉距离上次过去了多少毫秒, 2^64毫秒是一个非常大的值, 不担心溢出
+  uint64_t current_retransmission_timeout;//RTO 在window_size不是0的时候*2(因为"指数后退"), 
+  uint64_t _sequence_numbers_in_flight;//outstanding sequence numbers
+  uint64_t _consecutive_retransmissions_in_current_window;//当前窗口中连续重传发生的次数
+
+  SlidingWindow sliding_window;//滑动窗口
+  OutputQueue output_queue;//给maybe_send()用的队列, 要发送了从队列里拿索引, 从滑动窗口里找
+};
+//超时 重传 , 三次Ack, 重传.
+class RetransmissionTimer{
+  private:
+    uint64_t current_time;
+    uint64_t expire_time;
+  public:
+    RetransmissionTimer():current_time(0),expire_time(UINT64_MAX){}//2^64毫秒是一个非常大的值, 比地球年龄都大, 不用担心因为初始化的值太小了引起不必要的过期
+    void refresh_time(uint64_t ms_since_last_tick){this->current_time+=ms_since_last_tick;}
+    void set_timeout(uint64_t retransmission_timeout){this->expire_time=retransmission_timeout+this->current_time;}
+    void restart(uint64_t retransmission_timeout){this->set_timeout(retransmission_timeout);}
+    bool is_timeout(){return this->current_time>this->expire_time;}
+};
+class ItemInSlidingWindow{
+  public:
+    TCPSenderMessage tcp_sender_message;
+    bool acked;
+    RetransmissionTimer retransmission_timer; 
+};
+
+class SlidingWindow{
+  public:
+    uint64_t window_size;
+    uint64_t first_unacked_absolute_seqno;//第一个为应答的
+    std::map<uint64_t,ItemInSlidingWindow> sliding_window_items;//(absolute_seqno)索引, tcp_segments, 第一个就最早未被应答的, 应答了就清除出去 
+};
+//给maybe_send()用的, 调用就出队列 准备发送/重发的就放入队列, 发送/重发的时候计时
+class OutputQueue{
+  std::queue<uint64_t> output_queue;//避免存重复数据, 这里存的是sliding_window_items的index, 要发送哪个就放哪个index
 };
