@@ -107,5 +107,8 @@ private:
   std::queue<uint64_t> output_queue;//给maybe_send()用的队列, 要发送了从队列里拿索引, 从滑动窗口里找
 
   TCPState tcp_state;
-
+  void save_to_sliding_window_and_push_in_send_queue(TCPSenderMessage msg);
+  // TCPSenderMessage to_tcp_sender_message(){TCPSenderMessage msg; msg.seqno = Wrap32::wrap( next_absolute_sequence_number, isn_ ); return msg;}
+  TCPSenderMessage to_tcp_sender_message(std::string data,bool syn=false, bool fin=false){ TCPSenderMessage msg;msg.seqno = Wrap32::wrap( next_absolute_sequence_number, isn_ );msg.SYN=syn;msg.FIN =fin;msg.payload = data;return msg;}
+  TCPSenderMessage to_tcp_sender_message(bool syn=false, bool fin=false){ TCPSenderMessage msg;msg.seqno = Wrap32::wrap( next_absolute_sequence_number, isn_ );msg.SYN=syn;msg.FIN =fin;return msg;}
 };
