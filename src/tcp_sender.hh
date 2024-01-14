@@ -80,6 +80,12 @@ class ItemInSlidingWindow{
 
 class SlidingWindow{
   public:
+    SlidingWindow()
+    : window_size(0)
+    , bytes_pushed(0)
+    , first_unacked_absolute_seqno(0)
+    , sliding_window_items()
+    {}
     uint64_t window_size;
     uint64_t bytes_pushed;
     uint64_t first_unacked_absolute_seqno;//第一个为应答的
