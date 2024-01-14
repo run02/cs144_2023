@@ -6,7 +6,7 @@
 using namespace std;
 
 // 定义一个开关宏，用于控制是否启用打印
-#define ENABLE_DEBUG_PRINT 1
+// #define ENABLE_DEBUG_PRINT 1
 #ifdef ENABLE_DEBUG_PRINT
 #include <iostream> // 在开关宏中引入iostream头文件
 // 打印文字
@@ -89,7 +89,7 @@ void TCPSender::save_to_sliding_window_and_push_in_send_queue(TCPSenderMessage m
   output_queue.push( next_absolute_sequence_number );
   _sequence_numbers_in_flight+=msg.sequence_length();
   sliding_window.bytes_pushed+=msg.payload.length(); 
-  PRINT_WITH_LABEL( "next_absolute_sequence_number", next_absolute_sequence_number );
+  // PRINT_WITH_LABEL( "next_absolute_sequence_number", next_absolute_sequence_number );
 }
 
 void TCPSender::push( Reader& outbound_stream ){
@@ -148,6 +148,7 @@ void TCPSender::receive(const TCPReceiverMessage& msg) {
     sliding_window.window_size = msg.window_size; 
     PRINT_WITH_LABEL("Updated Window Size", sliding_window.window_size);
     uint64_t abs_seqno = Wrap32(msg.ackno.value()).unwrap(isn_, next_absolute_sequence_number);
+    /*找到问题了, receiver可能会一次ack 1个, 两个, n个, 或者是窗口的全部, 也有可能是窗口中的左半部分, 得先往左看, 消除左边所有的, 然后再往右看? 想不明白了, 先睡觉, 明天再说*/
     PRINT_WITH_LABEL("Absolute Sequence Number", abs_seqno);
     {
           auto it = sliding_window.sliding_window_items.find(abs_seqno);
@@ -156,7 +157,7 @@ void TCPSender::receive(const TCPReceiverMessage& msg) {
               PRINT_WITH_LABEL("Found Sequence Number in Sliding Window", it->first);
               if (it->second.acked == false) {
                   it->second.acked = true;
-                  _sequence_numbers_in_flight-=it->second.tcp_sender_message.sequence_length();
+                  _sequence_numbers_in_flight -= it->second.tcp_sender_message.sequence_length();
                   PRINT_INFO("Marking Sequence Number as Acked and Decreasing _sequence_numbers_in_flight");
               }
               if (it->first == 1) {
@@ -179,7 +180,8 @@ void TCPSender::receive(const TCPReceiverMessage& msg) {
         while (it != sliding_window.sliding_window_items.end()) {
             auto p=it; 
             ++it;
-            if ((p->second.acked == false) && (p->second.retransmission_timer.is_timeout())) {//找到超时的, 重置时钟
+            if (p->second.acked == false) {//找到超时的, 重置时钟
+                
                 p->second.retransmission_timer = RetransmissionTimer();
                 PRINT_WITH_LABEL("Resetting Retransmission Timer for Sequence Number", p->first);
             }else{//找到被ack过的, 释放占用的sliding_window的内存和状态
@@ -198,23 +200,23 @@ void TCPSender::tick( const size_t ms_since_last_tick )
   current_time += ms_since_last_tick; // 更新时间
   // 检查超时丢包, 记录丢包数量, 尝试重发
   // If tick is called and the retransmission timer has expired Retransmit the earliest
-  auto it = sliding_window.sliding_window_items.find( sliding_window.first_unacked_absolute_seqno );
-  if ( it != sliding_window.sliding_window_items.end() ) {
-    it->second.retransmission_timer.set_current_time( current_time ); // 更新定时器的时间
-    if ( it->second.acked == false && it->second.retransmission_timer.is_timeout() ) {
-      output_queue.push( it->first );
+  // auto it = sliding_window.sliding_window_items.find( sliding_window.first_unacked_absolute_seqno );
+  // if ( it != sliding_window.sliding_window_items.end() ) {
+  //   it->second.retransmission_timer.set_current_time( current_time ); // 更新定时器的时间
+  //   if ( it->second.acked == false && it->second.retransmission_timer.is_timeout() ) {
+  //     output_queue.push( it->first );
 
-      // i. Keep track of the number of consecutive retransmissions
-      it++ = sliding_window.sliding_window_items.begin();
-      while ( it != sliding_window.sliding_window_items.end() ) {
-        it->second.retransmission_timer.set_current_time( current_time ); // 更新定时器的时间
-        if ( it->second.acked == false && it->second.retransmission_timer.is_timeout() ) {
-          _consecutive_retransmissions_in_current_window++;
-        }
-      }
+  //     // i. Keep track of the number of consecutive retransmissions
+  //     it++ = sliding_window.sliding_window_items.begin();
+  //     while ( it != sliding_window.sliding_window_items.end() ) {
+  //       it->second.retransmission_timer.set_current_time( current_time ); // 更新定时器的时间
+  //       if ( it->second.acked == false && it->second.retransmission_timer.is_timeout() ) {
+  //         _consecutive_retransmissions_in_current_window++;
+  //       }
+  //     }
 
-      // ii. Double the value of RTO. This is called “exponential backoff”
-      current_retransmission_timeout += current_retransmission_timeout;
-    }
-  }
+  //     // ii. Double the value of RTO. This is called “exponential backoff”
+  //     current_retransmission_timeout += current_retransmission_timeout;
+  //   }
+  // }
 }
