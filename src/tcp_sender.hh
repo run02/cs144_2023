@@ -6,47 +6,6 @@
 
 #include <map>
 
-class TCPSender
-{
-  Wrap32 isn_;
-  uint64_t initial_RTO_ms_;
-
-public:
-  /* Construct TCP sender with given default Retransmission Timeout and possible ISN */
-  TCPSender( uint64_t initial_RTO_ms, std::optional<Wrap32> fixed_isn );
-
-  /* Push bytes from the outbound stream */
-  void push( Reader& outbound_stream );
-
-  /* Send a TCPSenderMessage if needed (or empty optional otherwise) */
-  std::optional<TCPSenderMessage> maybe_send();
-
-  /* Generate an empty TCPSenderMessage */
-  TCPSenderMessage send_empty_message() const; //发一个只有Header,Payload为空的消息,用来让receiver来产生ack, 不需要管是不是发送成功了, 只需要管序列号正确即可
-
-  /* Receive an act on a TCPReceiverMessage from the peer's receiver */
-  void receive( const TCPReceiverMessage& msg );
-
-  /* Time has passed by the given # of milliseconds since the last time the tick() method was called. */
-  void tick( uint64_t ms_since_last_tick );
-
-  /* Accessors for use in testing */
-  uint64_t sequence_numbers_in_flight() const;  // How many sequence numbers are outstanding?
-  uint64_t consecutive_retransmissions() const; // How many consecutive *re*transmissions have happened?
-
-private:
-  uint64_t current_time;//当前的时间, 每隔一段时间, tick会被调用, 告诉距离上次过去了多少毫秒, 2^64毫秒是一个非常大的值, 不担心溢出
-  uint64_t current_retransmission_timeout;//RTO 在window_size不是0的时候*2(因为"指数后退"), 
-  uint64_t _sequence_numbers_in_flight;//outstanding sequence numbers
-  uint64_t _consecutive_retransmissions_in_current_window;//当前窗口中连续重传发生的次数
-
-  uint64_t next_absolute_sequence_number;//下一条要发送的数据的abs_seqno
-  SlidingWindow sliding_window;//滑动窗口
-  std::queue<uint64_t> output_queue;//给maybe_send()用的队列, 要发送了从队列里拿索引, 从滑动窗口里找
-
-  TCPState tcp_state;
-
-};
 //超时 重传 , 三次Ack, 重传.
 class RetransmissionTimer{
   private:
@@ -107,4 +66,46 @@ enum class TCPState {
     CLOSING,
     // LAST_ACK,
     TIME_WAIT
+};
+
+class TCPSender
+{
+  Wrap32 isn_;
+  uint64_t initial_RTO_ms_;
+
+public:
+  /* Construct TCP sender with given default Retransmission Timeout and possible ISN */
+  TCPSender( uint64_t initial_RTO_ms, std::optional<Wrap32> fixed_isn );
+
+  /* Push bytes from the outbound stream */
+  void push( Reader& outbound_stream );
+
+  /* Send a TCPSenderMessage if needed (or empty optional otherwise) */
+  std::optional<TCPSenderMessage> maybe_send();
+
+  /* Generate an empty TCPSenderMessage */
+  TCPSenderMessage send_empty_message() const; //发一个只有Header,Payload为空的消息,用来让receiver来产生ack, 不需要管是不是发送成功了, 只需要管序列号正确即可
+
+  /* Receive an act on a TCPReceiverMessage from the peer's receiver */
+  void receive( const TCPReceiverMessage& msg );
+
+  /* Time has passed by the given # of milliseconds since the last time the tick() method was called. */
+  void tick( uint64_t ms_since_last_tick );
+
+  /* Accessors for use in testing */
+  uint64_t sequence_numbers_in_flight() const;  // How many sequence numbers are outstanding?
+  uint64_t consecutive_retransmissions() const; // How many consecutive *re*transmissions have happened?
+
+private:
+  uint64_t current_time;//当前的时间, 每隔一段时间, tick会被调用, 告诉距离上次过去了多少毫秒, 2^64毫秒是一个非常大的值, 不担心溢出
+  uint64_t current_retransmission_timeout;//RTO 在window_size不是0的时候*2(因为"指数后退"), 
+  uint64_t _sequence_numbers_in_flight;//outstanding sequence numbers
+  uint64_t _consecutive_retransmissions_in_current_window;//当前窗口中连续重传发生的次数
+
+  uint64_t next_absolute_sequence_number;//下一条要发送的数据的abs_seqno
+  SlidingWindow sliding_window;//滑动窗口
+  std::queue<uint64_t> output_queue;//给maybe_send()用的队列, 要发送了从队列里拿索引, 从滑动窗口里找
+
+  TCPState tcp_state;
+
 };
