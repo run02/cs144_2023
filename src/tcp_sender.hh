@@ -17,7 +17,7 @@ class RetransmissionTimer{
     void set_current_time(uint64_t time){this->current_time=time;}
     void set_timeout(uint64_t retransmission_timeout){this->expire_time=retransmission_timeout+this->current_time;}
     void restart(uint64_t retransmission_timeout){this->set_timeout(retransmission_timeout);}
-    bool is_timeout(){return this->current_time>this->expire_time;}
+    bool is_timeout(){return this->current_time>=this->expire_time;}
 };
 class ItemInSlidingWindow{
   public:
@@ -49,7 +49,7 @@ class SlidingWindow{
     uint64_t bytes_pushed;
     uint64_t first_unacked_absolute_seqno;//第一个为应答的
     std::map<uint64_t,ItemInSlidingWindow> sliding_window_items;//(absolute_seqno)索引, tcp_segments, 第一个就最早未被应答的, 应答了就清除出去 
-    uint64_t available_capacity(){return window_size>bytes_pushed?window_size-bytes_pushed:0;}//有可能里边还有数据呢, 但是window_size被ack变成0了
+    uint64_t available_capacity(){return (window_size>bytes_pushed)?(window_size-bytes_pushed):0;}//有可能里边还有数据呢, 但是window_size被ack变成0了
 };
 
 
@@ -107,6 +107,8 @@ private:
   std::queue<uint64_t> output_queue;//给maybe_send()用的队列, 要发送了从队列里拿索引, 从滑动窗口里找
 
   TCPState tcp_state;
+  bool fin_sent;
+  uint64_t biggest_previous_ackno;
   void save_to_sliding_window_and_push_in_send_queue(TCPSenderMessage msg);
   // TCPSenderMessage to_tcp_sender_message(){TCPSenderMessage msg; msg.seqno = Wrap32::wrap( next_absolute_sequence_number, isn_ ); return msg;}
   TCPSenderMessage to_tcp_sender_message(std::string data,bool syn=false, bool fin=false){ TCPSenderMessage msg;msg.seqno = Wrap32::wrap( next_absolute_sequence_number, isn_ );msg.SYN=syn;msg.FIN =fin;msg.payload = data;return msg;}
