@@ -6,17 +6,14 @@
 
 #include <map>
 
-//超时 重传 , 三次Ack, 重传.
 class RetransmissionTimer{
   private:
     uint64_t current_time;
     uint64_t expire_time;
   public:
     RetransmissionTimer():current_time(0),expire_time(UINT64_MAX){}//2^64毫秒是一个非常大的值, 比地球年龄都大, 不用担心因为初始化的值太小了引起不必要的过期
-    void refresh_time(uint64_t ms_since_last_tick){this->current_time+=ms_since_last_tick;}
     void set_current_time(uint64_t time){this->current_time=time;}
     void set_timeout(uint64_t retransmission_timeout){this->expire_time=retransmission_timeout+this->current_time;}
-    void restart(uint64_t retransmission_timeout){this->set_timeout(retransmission_timeout);}
     bool is_timeout(){return this->current_time>=this->expire_time;}
 };
 class ItemInSlidingWindow{
@@ -24,16 +21,9 @@ class ItemInSlidingWindow{
     ItemInSlidingWindow(TCPSenderMessage msg):
       tcp_sender_message(msg),
       acked(false),
-      is_fin(false),
-      retransmission_timer(RetransmissionTimer()){}
-    ItemInSlidingWindow(TCPSenderMessage msg,bool fin):
-      tcp_sender_message(msg),
-      acked(false),
-      is_fin(fin),
       retransmission_timer(RetransmissionTimer()){}
     TCPSenderMessage tcp_sender_message;
     bool acked;
-    bool is_fin;
     RetransmissionTimer retransmission_timer; 
 };
 
@@ -42,12 +32,10 @@ class SlidingWindow{
     SlidingWindow()
     : window_size(0)
     , bytes_pushed(0)
-    , first_unacked_absolute_seqno(0)
     , sliding_window_items()
     {}
     uint64_t window_size;
     uint64_t bytes_pushed;
-    uint64_t first_unacked_absolute_seqno;//第一个为应答的
     std::map<uint64_t,ItemInSlidingWindow> sliding_window_items;//(absolute_seqno)索引, tcp_segments, 第一个就最早未被应答的, 应答了就清除出去 
     uint64_t available_capacity(){return (window_size>bytes_pushed)?(window_size-bytes_pushed):0;}//有可能里边还有数据呢, 但是window_size被ack变成0了
 };
@@ -60,12 +48,12 @@ enum class TCPState {
     SYN_SENT,
     // SYN_RECEIVED,
     ESTABLISHED,
-    FIN_WAIT_1,
-    FIN_WAIT_2,
-    // CLOSE_WAIT,
-    CLOSING,
-    // LAST_ACK,
-    TIME_WAIT
+    // FIN_WAIT_1,
+    // FIN_WAIT_2,
+    // // CLOSE_WAIT,
+    // CLOSING,
+    // // LAST_ACK,
+    // TIME_WAIT
 };
 
 class TCPSender
@@ -109,8 +97,8 @@ private:
   TCPState tcp_state;
   bool fin_sent;
   uint64_t biggest_previous_ackno;
+  
   void save_to_sliding_window_and_push_in_send_queue(TCPSenderMessage msg);
-  // TCPSenderMessage to_tcp_sender_message(){TCPSenderMessage msg; msg.seqno = Wrap32::wrap( next_absolute_sequence_number, isn_ ); return msg;}
   TCPSenderMessage to_tcp_sender_message(std::string data,bool syn=false, bool fin=false){ TCPSenderMessage msg;msg.seqno = Wrap32::wrap( next_absolute_sequence_number, isn_ );msg.SYN=syn;msg.FIN =fin;msg.payload = data;return msg;}
   TCPSenderMessage to_tcp_sender_message(bool syn=false, bool fin=false){ TCPSenderMessage msg;msg.seqno = Wrap32::wrap( next_absolute_sequence_number, isn_ );msg.SYN=syn;msg.FIN =fin;return msg;}
 };

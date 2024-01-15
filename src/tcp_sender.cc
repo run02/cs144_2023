@@ -94,7 +94,7 @@ void TCPSender::save_to_sliding_window_and_push_in_send_queue(TCPSenderMessage m
   output_queue.push( next_absolute_sequence_number );
   _sequence_numbers_in_flight+=msg.sequence_length();
   sliding_window.bytes_pushed+=msg.payload.length(); 
-  //  sliding_window.bytes_pushed+=msg.sequence_length(); 
+  //  sliding_window.bytes_pushed+=msg.sequence_length(); fin出现占用一个window的情况在已经在push中额外考虑了, 所以是加data.length没错
   PRINT_WITH_LABEL( "insert_absolute_sequence_number", next_absolute_sequence_number );
 }
 
@@ -205,10 +205,6 @@ void TCPSender::receive(const TCPReceiverMessage& msg) {
                       tcp_state = TCPState::ESTABLISHED;
                       PRINT_INFO("TCP State set to ESTABLISHED");
                   } 
-                  if (p->second.is_fin) {
-                      tcp_state = TCPState::CLOSED;
-                      PRINT_INFO("TCP State set to CLOSED due to FIN");
-                  }
                   p++;
               }
           }
