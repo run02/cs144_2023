@@ -29,7 +29,7 @@ NetworkInterface::NetworkInterface( const EthernetAddress& ethernet_address, con
 // Address::ipv4_numeric() method.
 void NetworkInterface::send_datagram( const InternetDatagram& dgram, const Address& next_hop )
 {
-  cout<<"NetworkInterface::send_datagram( const InternetDatagram& dgram, const Address& next_hop )"<<endl;
+  // cout<<"NetworkInterface::send_datagram( const InternetDatagram& dgram, const Address& next_hop )"<<endl;
   uint32_t ip4=next_hop.ipv4_numeric();
   auto it=known_hosts.find(ip4);
   //如果找到了, 看看是否过期, 没过期, 就发送
@@ -51,7 +51,7 @@ void NetworkInterface::send_datagram( const InternetDatagram& dgram, const Addre
 // frame: the incoming Ethernet frame
 optional<InternetDatagram> NetworkInterface::recv_frame( const EthernetFrame& frame )
 {
-  cout<<"NetworkInterface::recv_frame( const EthernetFrame& frame )"<<endl;
+  // cout<<"NetworkInterface::recv_frame( const EthernetFrame& frame )"<<endl;
   //如果是ipv4的数据包就发给调用的, 如果是Arp就处理Aro请求
   if(frame.header.type==EthernetHeader::TYPE_IPv4&&frame.header.dst==ethernet_address_){
     InternetDatagram ipv4_frame;
