@@ -5,6 +5,8 @@
 #include <optional>
 #include <queue>
 
+#include <list>
+
 // A wrapper for NetworkInterface that makes the host-side
 // interface asynchronous: instead of returning received datagrams
 // immediately (from the `recv_frame` method), it stores them for
@@ -48,6 +50,16 @@ public:
   }
 };
 
+
+struct ItemInRouterTable{
+  uint32_t route_prefix;
+  uint8_t prefix_length;
+  std::optional<Address> next_hop;
+  size_t interface_num;
+  ItemInRouterTable() : route_prefix(0), prefix_length(0), next_hop(std::nullopt),interface_num(0) {}
+  ItemInRouterTable(uint32_t r,uint8_t p,std::optional<Address> n,size_t i):route_prefix(r),prefix_length(p),next_hop(n),interface_num(i){}
+};
+
 // A router that has multiple network interfaces and
 // performs longest-prefix-match routing between them.
 class Router
@@ -81,4 +93,7 @@ public:
   // route with the longest prefix_length that matches the datagram's
   // destination address.
   void route();
+  Router():routing_table(){}
+private:
+  std::list<ItemInRouterTable> routing_table;
 };
